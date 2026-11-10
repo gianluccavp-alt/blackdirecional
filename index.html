@@ -85,7 +85,10 @@
   .money b{padding:0 6px 0 18px;color:var(--gray);font-size:22px;font-weight:700}
   .money input{border:0;outline:0;font:inherit;font-size:30px;font-weight:800;padding:12px 18px 12px 4px;width:100%;background:transparent;color:var(--ink);letter-spacing:-.01em}
   .money input::placeholder{color:#cfc9c5}
-  .bloco + .bloco{margin-top:24px}
+  .lado{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:end}
+  .lado .money,.lado .pick{max-width:none}
+  .money input{height:60px}
+  .pick select{height:64px}
   .pick{position:relative;max-width:440px}
   .pick::after{content:"";position:absolute;right:20px;top:50%;width:10px;height:10px;border-right:2.5px solid var(--gray-dark);border-bottom:2.5px solid var(--gray-dark);transform:translateY(-70%) rotate(45deg);pointer-events:none}
   .pick select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:22px;font-weight:700;padding:15px 52px 15px 18px;border:2px solid var(--line);border-radius:18px;background:#fff;color:var(--ink);cursor:pointer;outline:0;transition:.2s}
@@ -219,7 +222,7 @@
     .bf{font-size:10.5px;padding:7px 12px}
     .card{padding:20px}
     .pinfo{grid-template-columns:1fr 1fr}
-    .res,.res.tres,.concs{grid-template-columns:1fr}
+    .res,.res.tres,.concs,.lado{grid-template-columns:1fr}
     .val{font-size:34px}
     .row{grid-template-columns:96px 1fr 92px;gap:8px}
     .stepper li{font-size:12px;padding-right:10px}
@@ -262,6 +265,7 @@
       <span class="num" id="n2">2</span>
       <div><h2>Valor e início do Pró-Soluto</h2><p>Quanto vai no Pró-Soluto e quando o cliente começa a pagar.</p></div>
     </div>
+    <div class="lado">
     <div class="bloco">
       <span class="label">Valor do Pró-Soluto</span>
       <label class="money">
@@ -274,6 +278,7 @@
       <div class="pick">
         <select id="mesIni" aria-label="Mês da 1ª parcela"></select>
       </div>
+    </div>
     </div>
   </section>
 

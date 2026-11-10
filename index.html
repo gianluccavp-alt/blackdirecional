@@ -69,6 +69,23 @@
   .when select{flex:1;font:inherit;font-size:20px;font-weight:700;padding:13px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);cursor:pointer;min-width:0}
   .when select:focus{outline:0;border-color:var(--red)}
   .when select.vazio{color:var(--gray);font-weight:600}
+  [hidden]{display:none !important}
+  .conc-wrap{margin-top:16px}
+  .btn-add{background:transparent;border:2px dashed var(--line);color:var(--gray-dark);border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-add:hover{border-color:var(--red);color:var(--red)}
+  .conc{background:#fff;border:1px solid var(--line)}
+  .conc .tag,.conc-print .tag{background:var(--gray-light);color:var(--gray-dark)}
+  .conc-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .link{background:none;border:0;color:var(--gray);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-bottom:12px}
+  .link:hover{color:var(--red)}
+  .conc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+  .cin{width:100%;font:inherit;font-size:17px;font-weight:700;padding:10px 12px;border:2px solid var(--line);border-radius:10px;outline:0;background:#fff;color:var(--ink)}
+  .cin:focus{border-color:var(--red)}
+  .money.sm{max-width:none}
+  .money.sm b{font-size:17px;padding-left:12px}
+  .money.sm input{font-size:17px;padding:10px 12px 10px 4px}
+  .when.sm select{font-size:16px;padding:10px 8px}
+  .conc-print{display:none}
   .cities{display:flex;gap:10px;flex-wrap:wrap}
   .city{border:2px solid var(--line);background:#fff;border-radius:10px;padding:12px 22px;font:inherit;font-weight:700;color:var(--gray-dark);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
   .city:hover{border-color:var(--gray)}
@@ -101,6 +118,9 @@
     .res{grid-template-columns:1fr 1fr}
     .opt,.save{break-inside:avoid}
     .val{font-size:32px}
+    .btn-add,#conc{display:none !important}
+    .conc-wrap:not(.completo){display:none !important}
+    .conc-print{display:block}
   }
   @media (max-width:680px){
     .pinfo{grid-template-columns:1fr 1fr}
@@ -150,6 +170,28 @@
   </section>
 
   <section id="out"></section>
+
+  <section class="conc-wrap" id="concWrap" hidden>
+    <button type="button" class="btn-add" id="concAdd">+ Adicionar concorrente</button>
+    <div class="opt conc" id="conc" hidden>
+      <div class="conc-head">
+        <span class="tag">Concorrente</span>
+        <button type="button" class="link" id="concDel">Remover</button>
+      </div>
+      <div class="conc-grid">
+        <label class="cf"><span class="flabel">Nome (opcional)</span>
+          <input id="cNome" class="cin" maxlength="40" autocomplete="off" placeholder="Ex.: Construtora X"></label>
+        <div class="cf"><span class="flabel">Mês da 1ª parcela</span>
+          <div class="when sm"><select id="cMes" aria-label="Mês da 1ª parcela do concorrente"></select><select id="cAno" aria-label="Ano da 1ª parcela do concorrente"></select></div></div>
+        <label class="cf"><span class="flabel">Quantidade de parcelas</span>
+          <input id="cN" class="cin" inputmode="numeric" autocomplete="off" placeholder="Ex.: 60"></label>
+        <div class="cf"><span class="flabel">Valor da parcela</span>
+          <label class="money sm"><b>R$</b><input id="cVal" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor da parcela do concorrente"></label></div>
+      </div>
+      <div class="meta" id="cResumo"></div>
+    </div>
+    <div class="conc-print" id="concPrint"></div>
+  </section>
 
   <p class="note" id="note"></p>
 </main>
@@ -282,6 +324,66 @@ inp.addEventListener("input", () => {
   render();
 });
 
+// ---------- Concorrente (opcional; só aparece no PDF/resumo se tiver parcelas e valor) ----------
+const $ = id => document.getElementById(id);
+const cWrap = $("concWrap"), cBox = $("conc"), cAdd = $("concAdd"), cDel = $("concDel");
+const cNome = $("cNome"), cMes = $("cMes"), cAno = $("cAno"), cN = $("cN"), cVal = $("cVal");
+let cAberto = false, cValor = 0;
+const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+cMes.innerHTML = `<option value="">Mês</option>` + MESES_LONGOS.map((m, i) => `<option value="${i}">${m}</option>`).join("");
+cAno.innerHTML = `<option value="">Ano</option>` + [-1, 0, 1, 2, 3, 4].map(d => hoje.getFullYear() + d).map(a => `<option value="${a}">${a}</option>`).join("");
+[cMes, cAno].forEach(s => { s.classList.add("vazio"); s.onchange = () => { s.classList.toggle("vazio", s.value === ""); renderConc(); }; });
+cNome.oninput = renderConc;
+cN.oninput = () => { cN.value = cN.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 3); renderConc(); };
+cVal.oninput = () => {
+  const dig = cVal.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+  cValor = dig ? parseInt(dig, 10) / 100 : 0;
+  cVal.value = dig ? cValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  renderConc();
+};
+cAdd.onclick = () => { cAberto = true; renderConc(); cNome.focus(); };
+cDel.onclick = () => {
+  cAberto = false; cValor = 0;
+  [cNome, cN, cVal, cMes, cAno].forEach(x => x.value = "");
+  [cMes, cAno].forEach(s => s.classList.add("vazio"));
+  renderConc();
+};
+
+function concDados() {
+  const n = parseInt(cN.value, 10) || 0;
+  if (!cAberto || n <= 0 || cValor <= 0) return null;
+  const ini = (cMes.value !== "" && cAno.value !== "") ? +cAno.value * 12 + +cMes.value : null;
+  return { nome: cNome.value.trim(), n, parcela: cValor, ini, total: n * cValor };
+}
+
+function renderConc() {
+  cWrap.hidden = atual === null;
+  cAdd.hidden = cAberto;
+  cBox.hidden = !cAberto;
+  const d = concDados();
+  cWrap.classList.toggle("completo", !!d);
+  if (!d) {
+    $("cResumo").innerHTML = `<div><span>Preencha a quantidade de parcelas e o valor da parcela para comparar.</span></div>`;
+    $("concPrint").innerHTML = "";
+    return;
+  }
+  const dif = d.total - atual.valor;   // total do concorrente x total na Black (sem juros = valor do Pró-Soluto)
+  const linhas = [
+    d.ini !== null ? `<div><span>1ª parcela</span><span>${fmtMes(d.ini)}</span></div>` : "",
+    d.ini !== null ? `<div><span>Última parcela</span><span>${fmtMes(d.ini + d.n - 1)}</span></div>` : "",
+    `<div><span>Total pago</span><span>${brl(d.total)}</span></div>`,
+    `<div><span>${dif >= 0 ? "Black Friday paga a menos" : "Concorrente paga a menos"}</span><span>${brl(Math.abs(dif))}</span></div>`,
+  ].join("");
+  $("cResumo").innerHTML = linhas;
+  $("concPrint").innerHTML = `
+    <div class="opt normal">
+      <span class="tag">Concorrente${d.nome ? " · " + esc(d.nome) : ""}</span>
+      <div class="plan">${d.n} parcelas fixas de</div>
+      <div class="val">${brl(d.parcela)}</div>
+      <div class="meta">${linhas}</div>
+    </div>`;
+}
+
 function render() {
   const out = document.getElementById("out");
   const ini = inicioIdx();
@@ -292,6 +394,7 @@ function render() {
       : `A 1ª parcela deve ser a partir de ${fmtMes(PRIMEIRO_INICIO)}. Ajuste o mês`;
     out.innerHTML = `<div class="empty">${falta} para ver a simulação.</div>`;
     atual = null; clearTimeout(timerLog);
+    renderConc();
     return;
   }
   const e = EMPS[sel];
@@ -355,6 +458,8 @@ function render() {
       <span class="ok" id="ok"></span>
     </div>`;
 
+  renderConc();
+
   const sN = document.getElementById("selNormal"), sB = document.getElementById("selBF");
   sN.value = nNormal; sB.value = nBF;
   sN.onchange = () => { nNormal = +sN.value; render(); document.getElementById("selNormal").focus(); };
@@ -370,13 +475,15 @@ function render() {
 
   document.getElementById("copiar").onclick = async () => {
     registrarSimulacao(); registrar("copiar");
+    const d = concDados();
+    const concTxt = d ? `\nConcorrente${d.nome ? " (" + d.nome + ")" : ""}: ${d.n}x de ${brl(d.parcela)} (total ${brl(d.total)})` : "";
     const txt =
 `*Simulação Pró-Soluto – ${e.nome}*
 Valor do Pró-Soluto: ${brl(valor)}
 1ª parcela: ${primeiraTxt}
 
 Condição normal: ${nNormal}x de ${brl(n.parcela)} (total ${brl(totalNormal)})
-*Black Friday: ${nBF}x de ${brl(pBF)} SEM JUROS* (total ${brl(valor)})
+*Black Friday: ${nBF}x de ${brl(pBF)} SEM JUROS* (total ${brl(valor)})${concTxt}
 
 Economia: ${brl(economia)}`;
     try { await navigator.clipboard.writeText(txt); document.getElementById("ok").textContent = "Copiado!"; }

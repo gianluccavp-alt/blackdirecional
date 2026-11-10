@@ -70,22 +70,30 @@
   .when select:focus{outline:0;border-color:var(--red)}
   .when select.vazio{color:var(--gray);font-weight:600}
   [hidden]{display:none !important}
-  .conc-wrap{margin-top:16px}
-  .btn-add{background:transparent;border:2px dashed var(--line);color:var(--gray-dark);border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
+  .btn-add{background:transparent;border:2px dashed var(--gray);color:var(--gray-dark);border-radius:8px;padding:8px 14px;font:inherit;font-size:14px;font-weight:700;cursor:pointer;transition:.15s}
   .btn-add:hover{border-color:var(--red);color:var(--red)}
-  .conc{background:#fff;border:1px solid var(--line)}
-  .conc .tag,.conc-print .tag{background:var(--gray-light);color:var(--gray-dark)}
-  .conc-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
-  .link{background:none;border:0;color:var(--gray);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;margin-bottom:12px}
+  .concs{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .concs:empty{display:none}
+  .conc-item{display:flex;flex-direction:column;min-width:0}
+  .conc-item .opt{flex:1}
+  .conc-item .save{margin-top:12px;padding:12px 16px}
+  .conc-item .save .v{font-size:22px}
+  .conc-item .save .l{font-size:14px}
+  .save.neg{border-color:var(--line)} .save.neg .v{color:var(--gray-dark)}
+  .save.pend{border:2px dashed var(--line)} .save.pend .l{color:var(--gray);font-weight:500;font-size:14px}
+  .conc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .c-name{font:inherit;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border:1px dashed var(--gray);border-radius:999px;padding:4px 10px;background:var(--gray-light);color:var(--gray-dark);width:230px;max-width:100%;outline:0;margin-bottom:12px}
+  .c-name::placeholder{color:var(--gray)}
+  .c-n{font:inherit;font-weight:700;font-size:15px;width:64px;padding:6px 8px;border-radius:8px;border:2px solid var(--line);background:#fff;color:var(--ink);outline:0;text-align:center}
+  .c-valwrap{display:flex;align-items:baseline;gap:6px;margin:4px 0 2px}
+  .c-valwrap b{font-size:24px;font-weight:800;color:var(--gray)}
+  .c-val{font:inherit;font-size:40px;font-weight:800;letter-spacing:-.01em;border:0;border-bottom:2px dashed var(--line);width:100%;min-width:0;outline:0;background:transparent;color:var(--ink);padding:0}
+  .c-name:focus,.c-n:focus,.c-val:focus{border-color:var(--red)}
+  .c-when{display:flex;gap:4px}
+  .c-when select{font:inherit;font-size:13px;font-weight:600;padding:2px 4px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--ink)}
+  .link{background:none;border:0;color:var(--gray);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;padding:0}
   .link:hover{color:var(--red)}
-  .conc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
-  .cin{width:100%;font:inherit;font-size:17px;font-weight:700;padding:10px 12px;border:2px solid var(--line);border-radius:10px;outline:0;background:#fff;color:var(--ink)}
-  .cin:focus{border-color:var(--red)}
-  .money.sm{max-width:none}
-  .money.sm b{font-size:17px;padding-left:12px}
-  .money.sm input{font-size:17px;padding:10px 12px 10px 4px}
-  .when.sm select{font-size:16px;padding:10px 8px}
-  .conc-print{display:none}
+  .cp{display:none}
   .cities{display:flex;gap:10px;flex-wrap:wrap}
   .city{border:2px solid var(--line);background:#fff;border-radius:10px;padding:12px 22px;font:inherit;font-weight:700;color:var(--gray-dark);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
   .city:hover{border-color:var(--gray)}
@@ -118,11 +126,14 @@
     .res{grid-template-columns:1fr 1fr}
     .opt,.save{break-inside:avoid}
     .val{font-size:32px}
-    .btn-add,#conc{display:none !important}
-    .conc-wrap:not(.completo){display:none !important}
-    .conc-print{display:block}
+    .concs{grid-template-columns:1fr 1fr}
+    .conc-item:not(.completo),.e,.link{display:none !important}
+    .cp{display:inline}
+    .cp.val{display:block}
+    .c-valwrap{display:none}
   }
   @media (max-width:680px){
+    .concs{grid-template-columns:1fr}
     .pinfo{grid-template-columns:1fr 1fr}
     .res{grid-template-columns:1fr}
     .logo{height:46px}
@@ -171,27 +182,14 @@
 
   <section id="out"></section>
 
-  <section class="conc-wrap" id="concWrap" hidden>
-    <button type="button" class="btn-add" id="concAdd">+ Adicionar concorrente</button>
-    <div class="opt conc" id="conc" hidden>
-      <div class="conc-head">
-        <span class="tag">Concorrente</span>
-        <button type="button" class="link" id="concDel">Remover</button>
-      </div>
-      <div class="conc-grid">
-        <label class="cf"><span class="flabel">Nome (opcional)</span>
-          <input id="cNome" class="cin" maxlength="40" autocomplete="off" placeholder="Ex.: Construtora X"></label>
-        <div class="cf"><span class="flabel">Mês da 1ª parcela</span>
-          <div class="when sm"><select id="cMes" aria-label="Mês da 1ª parcela do concorrente"></select><select id="cAno" aria-label="Ano da 1ª parcela do concorrente"></select></div></div>
-        <label class="cf"><span class="flabel">Quantidade de parcelas</span>
-          <input id="cN" class="cin" inputmode="numeric" autocomplete="off" placeholder="Ex.: 60"></label>
-        <div class="cf"><span class="flabel">Valor da parcela</span>
-          <label class="money sm"><b>R$</b><input id="cVal" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor da parcela do concorrente"></label></div>
-      </div>
-      <div class="meta" id="cResumo"></div>
-    </div>
-    <div class="conc-print" id="concPrint"></div>
-  </section>
+  <section class="concs" id="concs" hidden></section>
+
+  <div class="actions" id="acoes" hidden>
+    <button class="btn red" id="pdf" type="button">Gerar PDF da simulação</button>
+    <button class="btn" id="copiar" type="button">Copiar resumo para o cliente</button>
+    <button class="btn-add" id="concAdd" type="button">+ Adicionar concorrente</button>
+    <span class="ok" id="ok"></span>
+  </div>
 
   <p class="note" id="note"></p>
 </main>
@@ -324,64 +322,89 @@ inp.addEventListener("input", () => {
   render();
 });
 
-// ---------- Concorrente (opcional; só aparece no PDF/resumo se tiver parcelas e valor) ----------
+// ---------- Concorrentes (opcionais; cada um só entra no PDF/resumo se tiver parcelas e valor) ----------
 const $ = id => document.getElementById(id);
-const cWrap = $("concWrap"), cBox = $("conc"), cAdd = $("concAdd"), cDel = $("concDel");
-const cNome = $("cNome"), cMes = $("cMes"), cAno = $("cAno"), cN = $("cN"), cVal = $("cVal");
-let cAberto = false, cValor = 0;
-const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-cMes.innerHTML = `<option value="">Mês</option>` + MESES_LONGOS.map((m, i) => `<option value="${i}">${m}</option>`).join("");
-cAno.innerHTML = `<option value="">Ano</option>` + [-1, 0, 1, 2, 3, 4].map(d => hoje.getFullYear() + d).map(a => `<option value="${a}">${a}</option>`).join("");
-[cMes, cAno].forEach(s => { s.classList.add("vazio"); s.onchange = () => { s.classList.toggle("vazio", s.value === ""); renderConc(); }; });
-cNome.oninput = renderConc;
-cN.oninput = () => { cN.value = cN.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 3); renderConc(); };
-cVal.oninput = () => {
-  const dig = cVal.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
-  cValor = dig ? parseInt(dig, 10) / 100 : 0;
-  cVal.value = dig ? cValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
-  renderConc();
-};
-cAdd.onclick = () => { cAberto = true; renderConc(); cNome.focus(); };
-cDel.onclick = () => {
-  cAberto = false; cValor = 0;
-  [cNome, cN, cVal, cMes, cAno].forEach(x => x.value = "");
-  [cMes, cAno].forEach(s => s.classList.add("vazio"));
-  renderConc();
-};
+const concsEl = $("concs"), acoesEl = $("acoes"), addBtn = $("concAdd");
+const MAX_CONC = 4;
+const concs = [];   // { el, nome, mes, ano, n, valor }
+const moeda = v => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const anosConc = [-1, 0, 1, 2, 3, 4].map(d => hoje.getFullYear() + d);
 
-function concDados() {
-  const n = parseInt(cN.value, 10) || 0;
-  if (!cAberto || n <= 0 || cValor <= 0) return null;
-  const ini = (cMes.value !== "" && cAno.value !== "") ? +cAno.value * 12 + +cMes.value : null;
-  return { nome: cNome.value.trim(), n, parcela: cValor, ini, total: n * cValor };
-}
-
-function renderConc() {
-  cWrap.hidden = atual === null;
-  cAdd.hidden = cAberto;
-  cBox.hidden = !cAberto;
-  const d = concDados();
-  cWrap.classList.toggle("completo", !!d);
-  if (!d) {
-    $("cResumo").innerHTML = `<div><span>Preencha a quantidade de parcelas e o valor da parcela para comparar.</span></div>`;
-    $("concPrint").innerHTML = "";
-    return;
-  }
-  const dif = d.total - atual.valor;   // total do concorrente x total na Black (sem juros = valor do Pró-Soluto)
-  const linhas = [
-    d.ini !== null ? `<div><span>1ª parcela</span><span>${fmtMes(d.ini)}</span></div>` : "",
-    d.ini !== null ? `<div><span>Última parcela</span><span>${fmtMes(d.ini + d.n - 1)}</span></div>` : "",
-    `<div><span>Total pago</span><span>${brl(d.total)}</span></div>`,
-    `<div><span>${dif >= 0 ? "Black Friday paga a menos" : "Concorrente paga a menos"}</span><span>${brl(Math.abs(dif))}</span></div>`,
-  ].join("");
-  $("cResumo").innerHTML = linhas;
-  $("concPrint").innerHTML = `
+function addConc() {
+  if (concs.length >= MAX_CONC) return;
+  const c = { nome: "", mes: "", ano: "", n: 0, valor: 0 };
+  const el = document.createElement("div");
+  el.className = "conc-item";
+  el.innerHTML = `
     <div class="opt normal">
-      <span class="tag">Concorrente${d.nome ? " · " + esc(d.nome) : ""}</span>
-      <div class="plan">${d.n} parcelas fixas de</div>
-      <div class="val">${brl(d.parcela)}</div>
-      <div class="meta">${linhas}</div>
-    </div>`;
+      <div class="conc-top">
+        <input class="c-name e" maxlength="30" autocomplete="off" placeholder="Nome do concorrente" aria-label="Nome do concorrente">
+        <span class="tag cp p-nome"></span>
+        <button type="button" class="link">Remover</button>
+      </div>
+      <div class="nsel"><input class="c-n e" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Quantidade de parcelas do concorrente"><span class="nprint p-n"></span> parcelas fixas de</div>
+      <div class="c-valwrap"><b>R$</b><input class="c-val" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor da parcela do concorrente"></div>
+      <div class="val cp p-val"></div>
+      <div class="meta">
+        <div><span>1ª parcela</span><span><span class="c-when e"><select class="c-mes" aria-label="Mês da 1ª parcela do concorrente"><option value="">Mês</option>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join("")}</select><select class="c-ano" aria-label="Ano da 1ª parcela do concorrente"><option value="">Ano</option>${anosConc.map(a => `<option value="${a}">${a}</option>`).join("")}</select></span><span class="cp p-ini"></span></span></div>
+        <div><span>Última parcela</span><span class="r-fim">—</span></div>
+        <div><span>Total pago</span><span class="r-total">—</span></div>
+      </div>
+    </div>
+    <div class="save c-save"><span class="l"></span><span class="v"></span></div>`;
+  c.el = el;
+  const q = s => el.querySelector(s);
+  q(".c-name").oninput = ev => { c.nome = ev.target.value.trim(); updConcs(); };
+  q(".c-n").oninput = ev => {
+    ev.target.value = ev.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 3);
+    c.n = parseInt(ev.target.value, 10) || 0; updConcs();
+  };
+  q(".c-val").oninput = ev => {
+    const dig = ev.target.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 10);
+    c.valor = dig ? parseInt(dig, 10) / 100 : 0;
+    ev.target.value = dig ? moeda(c.valor) : ""; updConcs();
+  };
+  q(".c-mes").onchange = ev => { c.mes = ev.target.value; updConcs(); };
+  q(".c-ano").onchange = ev => { c.ano = ev.target.value; updConcs(); };
+  q(".link").onclick = () => { concs.splice(concs.indexOf(c), 1); el.remove(); updConcs(); };
+  concs.push(c);
+  concsEl.appendChild(el);
+  updConcs();
+  q(".c-name").focus();
+}
+addBtn.onclick = addConc;
+
+const concCompleto = c => c.n > 0 && c.valor > 0;
+const concNome = c => c.nome || `Concorrente ${concs.indexOf(c) + 1}`;
+
+function updConcs() {
+  addBtn.hidden = concs.length >= MAX_CONC;
+  if (!atual) return;
+  concs.forEach(c => {
+    const q = s => c.el.querySelector(s);
+    const ok = concCompleto(c);
+    const ini = (c.mes !== "" && c.ano !== "") ? +c.ano * 12 + +c.mes : null;
+    const total = c.n * c.valor;
+    c.el.classList.toggle("completo", ok);
+    q(".p-nome").textContent = concNome(c);
+    q(".p-n").textContent = c.n || "";
+    q(".p-val").textContent = brl(c.valor);
+    q(".p-ini").textContent = ini !== null ? fmtMes(ini) : "—";
+    q(".r-fim").textContent = ini !== null && c.n > 0 ? fmtMes(ini + c.n - 1) : "—";
+    q(".r-total").textContent = ok ? brl(total) : "—";
+    const box = q(".c-save");
+    box.classList.remove("neg", "pend");
+    if (!ok) {
+      box.classList.add("pend");
+      q(".c-save .l").textContent = "Preencha a quantidade e o valor da parcela para comparar.";
+      q(".c-save .v").textContent = "";
+      return;
+    }
+    const dif = total - atual.valor;   // total do concorrente x total na Black (sem juros = valor do Pró-Soluto)
+    if (dif < 0) box.classList.add("neg");
+    q(".c-save .l").textContent = dif >= 0 ? `Economia na Black Friday vs. ${concNome(c)}` : `${concNome(c)} sai mais barato em`;
+    q(".c-save .v").textContent = brl(Math.abs(dif));
+  });
 }
 
 function render() {
@@ -394,7 +417,7 @@ function render() {
       : `A 1ª parcela deve ser a partir de ${fmtMes(PRIMEIRO_INICIO)}. Ajuste o mês`;
     out.innerHTML = `<div class="empty">${falta} para ver a simulação.</div>`;
     atual = null; clearTimeout(timerLog);
-    renderConc();
+    concsEl.hidden = true; acoesEl.hidden = true;
     return;
   }
   const e = EMPS[sel];
@@ -451,14 +474,11 @@ function render() {
     <div class="save">
       <span class="l">Economia do cliente na Black Friday</span>
       <span class="v">${brl(economia)}</span>
-    </div>
-    <div class="actions">
-      <button class="btn red" id="pdf" type="button">Gerar PDF da simulação</button>
-      <button class="btn" id="copiar" type="button">Copiar resumo para o cliente</button>
-      <span class="ok" id="ok"></span>
     </div>`;
 
-  renderConc();
+  concsEl.hidden = false; acoesEl.hidden = false;
+  document.getElementById("ok").textContent = "";
+  updConcs();
 
   const sN = document.getElementById("selNormal"), sB = document.getElementById("selBF");
   sN.value = nNormal; sB.value = nBF;
@@ -475,8 +495,8 @@ function render() {
 
   document.getElementById("copiar").onclick = async () => {
     registrarSimulacao(); registrar("copiar");
-    const d = concDados();
-    const concTxt = d ? `\nConcorrente${d.nome ? " (" + d.nome + ")" : ""}: ${d.n}x de ${brl(d.parcela)} (total ${brl(d.total)})` : "";
+    const concTxt = concs.filter(concCompleto)
+      .map(c => `\n${concNome(c)}: ${c.n}x de ${brl(c.valor)} (total ${brl(c.n * c.valor)})`).join("");
     const txt =
 `*Simulação Pró-Soluto – ${e.nome}*
 Valor do Pró-Soluto: ${brl(valor)}

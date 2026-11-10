@@ -157,6 +157,38 @@ const brl = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" 
 
 let cidade = null, sel = null, valor = 0, nNormal = N_NORMAL, nBF = N_BF;
 
+// Registro anônimo das simulações na planilha de acompanhamento (Google Apps Script).
+const LOG_URL = "https://script.google.com/macros/s/AKfycbx5GovDVTFphqAcIgHv9pJUnIjmxEsJ3Ydlg_QmCG3DmPkv5CVs7kZroE-voEupkkjprA/exec";
+const SESSAO = Math.random().toString(36).slice(2, 10);
+const registradas = new Set();
+let atual = null, timerLog = null;
+
+function registrar(evento) {
+  if (!LOG_URL.startsWith("https://") || !atual) return;
+  try {
+    fetch(LOG_URL, {
+      method: "POST", mode: "no-cors", keepalive: true,
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ sessao: SESSAO, evento, ...atual }),
+    }).catch(() => {});
+  } catch (_) {}
+}
+
+// Conta como simulação quando o corretor para de mexer por 3 segundos;
+// a mesma combinação (empreendimento, valor, parcelas) só é registrada uma vez por acesso.
+function agendarRegistro() {
+  clearTimeout(timerLog);
+  timerLog = setTimeout(registrarSimulacao, 3000);
+}
+function registrarSimulacao() {
+  clearTimeout(timerLog);
+  if (!atual) return;
+  const chave = [atual.empreendimento, atual.valor, atual.nNormal, atual.nBF].join("|");
+  if (registradas.has(chave)) return;
+  registradas.add(chave);
+  registrar("simulação");
+}
+
 // Parcelas iguais (Price) com taxa mensal variável:
 // a parcela k vence no mês base+k; se esse mês for até o mês da entrega (inclusive) → 0,5%, senão → 1,5%.
 // PV = Σ P / Π(1+r_j)  ⇒  P = PV / Σ(1/Π(1+r_j))
@@ -212,6 +244,7 @@ function render() {
   if (sel === null || valor <= 0) {
     const falta = cidade === null ? "Selecione a cidade" : sel === null ? "Selecione o empreendimento" : "Informe o valor do Pró-Soluto";
     out.innerHTML = `<div class="empty">${falta} para ver a simulação.</div>`;
+    atual = null; clearTimeout(timerLog);
     return;
   }
   const e = EMPS[sel];
@@ -221,6 +254,14 @@ function render() {
   const pBF = valor / nBF;
   const economia = totalNormal - valor;
   const hojeTxt = hoje.toLocaleDateString("pt-BR");
+  const r2 = v => Math.round(v * 100) / 100;
+  atual = {
+    cidade: e.cidade, empreendimento: e.nome, entrega: `${MESES[e.mes-1]}/${e.ano}`,
+    valor: r2(valor), nNormal, parcelaNormal: r2(n.parcela), totalNormal: r2(totalNormal),
+    nBF, parcelaBF: r2(pBF), economia: r2(economia),
+    economiaPct: Math.round(economia / totalNormal * 10000) / 10000,
+  };
+  agendarRegistro();
 
   out.innerHTML = `
     <div class="print-only">
@@ -269,6 +310,7 @@ function render() {
   sB.onchange = () => { nBF = +sB.value; render(); document.getElementById("selBF").focus(); };
 
   document.getElementById("pdf").onclick = () => {
+    registrarSimulacao(); registrar("pdf");
     const t = document.title;
     document.title = `Simulacao Pro-Soluto - ${e.nome} - ${hojeTxt.replace(/\//g, "-")}`;
     window.print();
@@ -276,6 +318,7 @@ function render() {
   };
 
   document.getElementById("copiar").onclick = async () => {
+    registrarSimulacao(); registrar("copiar");
     const txt =
 `*Simulação Pró-Soluto – ${e.nome}*
 Valor do Pró-Soluto: ${brl(valor)}

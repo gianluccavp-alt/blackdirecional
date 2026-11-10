@@ -402,7 +402,7 @@ function updConcs() {
     }
     const dif = total - atual.valor;   // total do concorrente x total na Black (sem juros = valor do Pró-Soluto)
     if (dif < 0) box.classList.add("neg");
-    q(".c-save .l").textContent = dif >= 0 ? `Economia na Black Friday vs. ${concNome(c)}` : `${concNome(c)} sai mais barato em`;
+    q(".c-save .l").textContent = dif >= 0 ? `Economia na Black Friday Direcional vs. ${concNome(c)}` : `${concNome(c)} sai mais barato em`;
     q(".c-save .v").textContent = brl(Math.abs(dif));
   });
 }
@@ -472,7 +472,7 @@ function render() {
       </div>
     </div>
     <div class="save">
-      <span class="l">Economia do cliente na Black Friday</span>
+      <span class="l">Economia do cliente na Black Friday Direcional</span>
       <span class="v">${brl(economia)}</span>
     </div>`;
 

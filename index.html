@@ -61,14 +61,6 @@
   .btn:hover{background:var(--ink)}
   .ok{color:var(--green);font-size:14px;font-weight:600}
   .note{font-size:12.5px;color:var(--gray);margin-top:22px;line-height:1.5}
-  .fields{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
-  .field{flex:1 1 260px;min-width:0}
-  .field:first-child{flex-basis:340px}
-  .flabel{display:block;font-size:13px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px}
-  .when{display:flex;gap:10px}
-  .when select{flex:1;font:inherit;font-size:20px;font-weight:700;padding:13px 12px;border:2px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);cursor:pointer;min-width:0}
-  .when select:focus{outline:0;border-color:var(--red)}
-  .when select.vazio{color:var(--gray);font-weight:600}
   .cities{display:flex;gap:10px;flex-wrap:wrap}
   .city{border:2px solid var(--line);background:#fff;border-radius:10px;padding:12px 22px;font:inherit;font-weight:700;color:var(--gray-dark);cursor:pointer;transition:.15s;display:flex;align-items:center;gap:8px}
   .city:hover{border-color:var(--gray)}
@@ -82,7 +74,7 @@
   .btn.red{background:var(--red)}
   .btn.red:hover{background:var(--red-dark)}
   .print-only{display:none}
-  .pinfo{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:0 0 18px}
+  .pinfo{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 0 18px}
   .pinfo div{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
   .pinfo span{display:block;font-size:11px;color:var(--gray);text-transform:uppercase;letter-spacing:.05em}
   .pinfo b{font-size:15px}
@@ -130,23 +122,11 @@
   </section>
 
   <section class="step">
-    <div class="step-title"><span class="num">2</span> Informe o valor e o início do Pró-Soluto</div>
-    <div class="fields">
-      <div class="field">
-        <span class="flabel">Valor do Pró-Soluto</span>
-        <label class="money">
-          <b>R$</b>
-          <input id="valor" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor do Pró-Soluto">
-        </label>
-      </div>
-      <div class="field">
-        <span class="flabel">Mês da 1ª parcela</span>
-        <div class="when">
-          <select id="mesIni" aria-label="Mês da 1ª parcela"></select>
-          <select id="anoIni" aria-label="Ano da 1ª parcela"></select>
-        </div>
-      </div>
-    </div>
+    <div class="step-title"><span class="num">2</span> Informe o valor do Pró-Soluto</div>
+    <label class="money">
+      <b>R$</b>
+      <input id="valor" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor do Pró-Soluto">
+    </label>
   </section>
 
   <section id="out"></section>
@@ -175,8 +155,6 @@ const fmtMes = idx => MESES[idx % 12] + "/" + Math.floor(idx / 12);
 const brl = v => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 let cidade = null, sel = null, valor = 0, nNormal = N_NORMAL, nBF = N_BF;
-let mesIni = null, anoIni = null;                 // mês (0-11) e ano da 1ª parcela
-const inicioIdx = () => (mesIni === null || anoIni === null) ? null : anoIni * 12 + mesIni;
 
 // Registro anônimo das simulações na planilha de acompanhamento (Google Apps Script).
 const LOG_URL = "https://script.google.com/macros/s/AKfycbx5GovDVTFphqAcIgHv9pJUnIjmxEsJ3Ydlg_QmCG3DmPkv5CVs7kZroE-voEupkkjprA/exec";
@@ -204,7 +182,7 @@ function agendarRegistro() {
 function registrarSimulacao() {
   clearTimeout(timerLog);
   if (!atual) return;
-  const chave = [atual.empreendimento, atual.valor, atual.primeiraParcela, atual.nNormal, atual.nBF].join("|");
+  const chave = [atual.empreendimento, atual.valor, atual.nNormal, atual.nBF].join("|");
   if (registradas.has(chave)) return;
   registradas.add(chave);
   registrar("simulação");
@@ -256,22 +234,6 @@ function renderEmps() {
 const opts = max => Array.from({ length: max }, (_, i) => max - i)
   .map(n => `<option value="${n}">${n}x</option>`).join("");
 
-// Mês e ano da 1ª parcela (obrigatórios, sem valor pré-selecionado).
-const MESES_LONGOS = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
-const selMes = document.getElementById("mesIni"), selAno = document.getElementById("anoIni");
-selMes.innerHTML = `<option value="">Mês</option>` + MESES_LONGOS.map((m, i) => `<option value="${i}">${m}</option>`).join("");
-selAno.innerHTML = `<option value="">Ano</option>` + [0, 1, 2, 3].map(d => hoje.getFullYear() + d).map(a => `<option value="${a}">${a}</option>`).join("");
-[selMes, selAno].forEach(s => {
-  s.classList.add("vazio");
-  s.onchange = () => {
-    mesIni = selMes.value === "" ? null : +selMes.value;
-    anoIni = selAno.value === "" ? null : +selAno.value;
-    selMes.classList.toggle("vazio", mesIni === null);
-    selAno.classList.toggle("vazio", anoIni === null);
-    render();
-  };
-});
-
 const inp = document.getElementById("valor");
 inp.addEventListener("input", () => {
   const dig = inp.value.replace(/\D/g, "").replace(/^0+/, "").slice(0, 12);
@@ -282,17 +244,14 @@ inp.addEventListener("input", () => {
 
 function render() {
   const out = document.getElementById("out");
-  if (sel === null || valor <= 0 || inicioIdx() === null) {
-    const falta = cidade === null ? "Selecione a cidade" : sel === null ? "Selecione o empreendimento"
-      : valor <= 0 ? "Informe o valor do Pró-Soluto" : "Informe o mês e o ano da 1ª parcela";
+  if (sel === null || valor <= 0) {
+    const falta = cidade === null ? "Selecione a cidade" : sel === null ? "Selecione o empreendimento" : "Informe o valor do Pró-Soluto";
     out.innerHTML = `<div class="empty">${falta} para ver a simulação.</div>`;
     atual = null; clearTimeout(timerLog);
     return;
   }
   const e = EMPS[sel];
   const entregaIdx = e.ano * 12 + (e.mes - 1);
-  const primeiraIdx = inicioIdx();
-  const primeiraTxt = fmtMes(primeiraIdx);
   const n = price(valor, nNormal, entregaIdx);
   const totalNormal = n.parcela * nNormal;
   const pBF = valor / nBF;
@@ -300,7 +259,7 @@ function render() {
   const hojeTxt = hoje.toLocaleDateString("pt-BR");
   const r2 = v => Math.round(v * 100) / 100;
   atual = {
-    cidade: e.cidade, empreendimento: e.nome, entrega: `${MESES[e.mes-1]}/${e.ano}`, primeiraParcela: primeiraTxt,
+    cidade: e.cidade, empreendimento: e.nome, entrega: `${MESES[e.mes-1]}/${e.ano}`,
     valor: r2(valor), nNormal, parcelaNormal: r2(n.parcela), totalNormal: r2(totalNormal),
     nBF, parcelaBF: r2(pBF), economia: r2(economia),
     economiaPct: Math.round(economia / totalNormal * 10000) / 10000,
@@ -314,7 +273,6 @@ function render() {
         <div><span>Empreendimento</span><b>${e.nome}</b></div>
         <div><span>Entrega prevista</span><b>${MESES[e.mes-1]}/${e.ano}</b></div>
         <div><span>Valor do Pró-Soluto</span><b>${brl(valor)}</b></div>
-        <div><span>1ª parcela</span><b>${primeiraTxt}</b></div>
       </div>
     </div>
     <div class="res">
@@ -323,7 +281,6 @@ function render() {
         <div class="nsel"><select id="selNormal" aria-label="Parcelas na condição normal">${opts(N_NORMAL)}</select><span class="nprint">${nNormal}</span> parcelas fixas de</div>
         <div class="val">${brl(n.parcela)}</div>
         <div class="meta">
-          <div><span>1ª parcela</span><span>${primeiraTxt}</span></div>
           <div><span>Correção em obra (até ${MESES[e.mes-1]}/${e.ano})</span><span>0,5% a.m. · ${n.obra}x</span></div>
           <div><span>Correção pós-obra</span><span>1,5% a.m. · ${n.pos}x</span></div>
           <div><span>Total pago</span><span>${brl(totalNormal)}</span></div>
@@ -334,7 +291,6 @@ function render() {
         <div class="nsel"><select id="selBF" aria-label="Parcelas na condição Black Friday">${opts(N_BF)}</select><span class="nprint">${nBF}</span> parcelas fixas de</div>
         <div class="val">${brl(pBF)}</div>
         <div class="meta">
-          <div><span>1ª parcela</span><span>${primeiraTxt}</span></div>
           <div><span>Correção</span><span>Sem juros</span></div>
           <div><span>Prazo</span><span>${nBF} ${nBF === 1 ? "mês" : "meses"}</span></div>
           <div><span>Total pago</span><span>${brl(valor)}</span></div>
@@ -369,7 +325,6 @@ function render() {
     const txt =
 `*Simulação Pró-Soluto – ${e.nome}*
 Valor do Pró-Soluto: ${brl(valor)}
-1ª parcela: ${primeiraTxt}
 
 Condição normal: ${nNormal}x de ${brl(n.parcela)} (total ${brl(totalNormal)})
 *Black Friday: ${nBF}x de ${brl(pBF)} SEM JUROS* (total ${brl(valor)})

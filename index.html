@@ -660,17 +660,36 @@ function render() {
 
   $("copiar").onclick = async () => {
     registrarSimulacao(); registrar("copiar");
-    const concTxt = concs.filter(concCompleto)
-      .map(c => `\n${concNome(c)}: ${c.n}x de ${brl(c.valor)} (total ${brl(c.n * c.valor)})`).join("");
-    const txt =
-`*Simulação Pró-Soluto – ${e.nome}*
-Valor do Pró-Soluto: ${brl(valor)}
-1ª parcela: ${primeiraTxt}
-
-Condição normal: ${nNormal}x de ${brl(n.parcela)} (total ${brl(totalNormal)})
-*Black Friday: ${nBF}x de ${brl(pBF)} SEM JUROS* (total ${brl(valor)})${concTxt}
-
-Economia: ${brl(economia)}`;
+    // Texto pensado para WhatsApp: *negrito*, _itálico_, emojis e blocos bem espaçados.
+    const linha = "━━━━━━━━━━━━━━━━━━";
+    const completos = concs.filter(concCompleto);
+    const blocoConc = completos.map(c =>
+`🏢 *${concNome(c)}*
+${c.n}x de ${brl(c.valor)}
+Total: ${brl(c.n * c.valor)}`).join("\n\n");
+    const vsConc = completos.map(c => {
+      const dif = c.n * c.valor - valor;
+      return dif > 0 ? `✅ ${brl(dif)} a menos que ${concNome(c)}` : `ℹ️ ${concNome(c)} sai ${brl(-dif)} mais barato`;
+    }).join("\n");
+    const txt = [
+`🏡 *Simulação Pró-Soluto*
+📍 ${e.nome} · ${e.cidade}
+🔑 Entrega prevista: ${MESES[e.mes-1]}/${e.ano}`,
+`💰 Valor do Pró-Soluto: *${brl(valor)}*
+📅 1ª parcela: ${primeiraTxt}`,
+      linha,
+`📋 *Condição normal*
+${nNormal}x de ${brl(n.parcela)}
+Total: ${brl(totalNormal)}`,
+`🔥 *BLACK FRIDAY DIRECIONAL* 🔥
+*${nBF}x de ${brl(pBF)} SEM JUROS*
+Total: ${brl(valor)}`,
+      blocoConc,
+      linha,
+`🎉 *Você economiza ${brl(economia)}*
+com a Black Friday Direcional (${pct}% a menos no total)` + (vsConc ? `\n\n${vsConc}` : ""),
+`_Simulação gerada em ${hojeTxt}. Valores sujeitos a análise e aprovação._`,
+    ].filter(Boolean).join("\n\n");
     try { await navigator.clipboard.writeText(txt); $("ok").textContent = "✓ Copiado!"; }
     catch { $("ok").textContent = "Não foi possível copiar."; }
   };

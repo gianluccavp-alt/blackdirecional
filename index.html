@@ -138,7 +138,6 @@
           <b>R$</b>
           <input id="valor" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor do Pró-Soluto">
         </label>
-        <div class="hint">Digite apenas os números — a formatação é automática.</div>
       </div>
       <div class="field">
         <span class="flabel">Mês da 1ª parcela</span>
@@ -146,7 +145,6 @@
           <select id="mesIni" aria-label="Mês da 1ª parcela"></select>
           <select id="anoIni" aria-label="Ano da 1ª parcela"></select>
         </div>
-        <div class="hint">Define quantas parcelas caem no período de obra.</div>
       </div>
     </div>
   </section>
@@ -213,15 +211,19 @@ function registrarSimulacao() {
 }
 
 // Parcelas iguais (Price) com taxa mensal variável:
-// a parcela k vence no mês (1ª parcela + k - 1); se esse mês for até o mês da entrega (inclusive) → 0,5%, senão → 1,5%.
+// mesma regra do CRM: a correção corre mês a mês a partir do mês atual (período 1);
+// os períodos até o mês da entrega (inclusive) usam 0,5% e os seguintes 1,5%.
+// Os 2 primeiros períodos só corrigem o saldo (carência); as n parcelas vêm depois.
+// O mês da 1ª parcela informado pelo corretor não altera o valor no CRM.
 // PV = Σ P / Π(1+r_j)  ⇒  P = PV / Σ(1/Π(1+r_j))
-function price(pv, n, entregaIdx, primeiraIdx) {
+const CARENCIA = 2;
+function price(pv, n, entregaIdx) {
+  const obraTotal = Math.max(0, entregaIdx - baseIdx + 1);
   let fator = 1, soma = 0, obra = 0;
-  for (let k = 1; k <= n; k++) {
-    const emObra = (primeiraIdx + k - 1) <= entregaIdx;
-    if (emObra) obra++;
+  for (let p = 1; p <= CARENCIA + n; p++) {
+    const emObra = p <= obraTotal;
     fator *= 1 + (emObra ? TAXA_OBRA : TAXA_POS);
-    soma += 1 / fator;
+    if (p > CARENCIA) { soma += 1 / fator; if (emObra) obra++; }
   }
   return { parcela: pv / soma, obra, pos: n - obra };
 }
@@ -291,7 +293,7 @@ function render() {
   const entregaIdx = e.ano * 12 + (e.mes - 1);
   const primeiraIdx = inicioIdx();
   const primeiraTxt = fmtMes(primeiraIdx);
-  const n = price(valor, nNormal, entregaIdx, primeiraIdx);
+  const n = price(valor, nNormal, entregaIdx);
   const totalNormal = n.parcela * nNormal;
   const pBF = valor / nBF;
   const economia = totalNormal - valor;
@@ -380,7 +382,8 @@ Economia: ${brl(economia)}`;
 
 document.getElementById("note").textContent =
   `Simulação gerada em ${hoje.toLocaleDateString("pt-BR")}. ` +
-  `Na condição normal, contando a partir do mês da 1ª parcela informado, as parcelas com vencimento até o mês de entrega (inclusive) são corrigidas a 0,5% a.m. e as seguintes a 1,5% a.m., ` +
+  `Na condição normal, o saldo é corrigido a partir de ${fmtMes(baseIdx)}: 0,5% a.m. até o mês de entrega (inclusive) e 1,5% a.m. depois, ` +
+  `com 2 meses de correção antes da 1ª parcela, mesma regra do CRM, ` +
   `com parcelas iguais calculadas pelo sistema Price. Valores meramente simulatórios, sujeitos à análise e aprovação.`;
 
 render();

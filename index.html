@@ -381,10 +381,7 @@ Economia: ${brl(economia)}`;
 }
 
 document.getElementById("note").textContent =
-  `Simulação gerada em ${hoje.toLocaleDateString("pt-BR")}. ` +
-  `Na condição normal, o saldo é corrigido a partir de ${fmtMes(baseIdx)}: 0,5% a.m. até o mês de entrega (inclusive) e 1,5% a.m. depois, ` +
-  `com 2 meses de correção antes da 1ª parcela, mesma regra do CRM, ` +
-  `com parcelas iguais calculadas pelo sistema Price. Valores meramente simulatórios, sujeitos à análise e aprovação.`;
+  `Simulação gerada em ${hoje.toLocaleDateString("pt-BR")}. Valores meramente simulatórios, sujeitos à análise e aprovação.`;
 
 render();
 </script>

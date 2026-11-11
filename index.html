@@ -170,6 +170,9 @@
   .link{background:none;border:0;color:var(--gray);font:inherit;font-size:12.5px;cursor:pointer;padding:4px 6px;border-radius:8px}
   .link:hover{color:var(--red);background:var(--red-soft)}
   .cp{display:none}
+  .modo{display:flex;background:var(--gray-light);border-radius:999px;padding:3px;gap:3px;margin:0 0 12px}
+  .modo button{flex:1;border:0;background:transparent;font:inherit;font-size:12px;font-weight:600;color:var(--gray-dark);padding:6px 8px;border-radius:999px;cursor:pointer;transition:.2s;white-space:nowrap}
+  .modo button.on{background:#fff;color:var(--ink);box-shadow:0 1px 4px rgba(20,19,19,.12)}
 
   /* Ações */
   .actions{margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
@@ -447,7 +450,7 @@ const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "
 
 function addConc() {
   if (concs.length >= MAX_CONC) return;
-  const c = { nome: "", mes: "", ano: "", n: 0, valor: 0 };
+  const c = { nome: "", mes: "", ano: "", n: 0, valor: 0, modo: "fixa" };
   const el = document.createElement("div");
   el.className = "conc-item";
   el.innerHTML = `
@@ -457,11 +460,17 @@ function addConc() {
         <span class="tag cp p-nome"></span>
         <button type="button" class="link">✕ Remover</button>
       </div>
-      <div class="nsel"><input class="c-n e" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Quantidade de parcelas do concorrente"><span class="nprint p-n"></span> parcelas fixas de</div>
+      <div class="modo e" role="radiogroup" aria-label="Tipo de parcela do concorrente">
+        <button type="button" data-m="fixa" class="on">Parcelas fixas</button>
+        <button type="button" data-m="corr">Corrigidas 1,5% a.m.</button>
+      </div>
+      <div class="nsel"><input class="c-n e" inputmode="numeric" autocomplete="off" placeholder="0" aria-label="Quantidade de parcelas do concorrente"><span class="nprint p-n"></span> <span class="c-plan">parcelas fixas de</span></div>
       <div class="c-valwrap"><b>R$</b><input class="c-val" inputmode="numeric" autocomplete="off" placeholder="0,00" aria-label="Valor da parcela do concorrente"></div>
       <div class="val cp p-val"></div>
       <div class="meta">
         <div><span>1ª parcela</span><span><span class="c-when e"><select class="c-mes" aria-label="Mês da 1ª parcela do concorrente"><option value="">Mês</option>${MESES.map((m, i) => `<option value="${i}">${m}</option>`).join("")}</select><select class="c-ano" aria-label="Ano da 1ª parcela do concorrente"><option value="">Ano</option>${anosConc.map(a => `<option value="${a}">${a}</option>`).join("")}</select></span><span class="cp p-ini"></span></span></div>
+        <div class="r-corr" hidden><span>Valor da 1ª parcela</span><span class="r-pri">—</span></div>
+        <div class="r-corr" hidden><span>Valor da última parcela</span><span class="r-ult">—</span></div>
         <div><span>Total pago</span><span class="r-total">—</span></div>
       </div>
     </div>
@@ -480,6 +489,11 @@ function addConc() {
     c.valor = dig ? parseInt(dig, 10) / 100 : 0;
     ev.target.value = dig ? moeda(c.valor) : ""; updConcs();
   };
+  el.querySelectorAll(".modo button").forEach(b => b.onclick = () => {
+    c.modo = b.dataset.m;
+    el.querySelectorAll(".modo button").forEach(x => { x.classList.toggle("on", x === b); x.setAttribute("aria-checked", x === b); });
+    updConcs();
+  });
   q(".c-mes").onchange = ev => { c.mes = ev.target.value; updConcs(); };
   q(".c-ano").onchange = ev => { c.ano = ev.target.value; updConcs(); };
   q(".link").onclick = () => { concs.splice(concs.indexOf(c), 1); el.remove(); c.save.remove(); updConcs(); };
@@ -492,6 +506,21 @@ addBtn.onclick = addConc;
 
 const concCompleto = c => c.n > 0 && c.valor > 0;
 const concNome = c => c.nome || `Concorrente ${concs.indexOf(c) + 1}`;
+
+// Fluxo do concorrente.
+// "fixa": n parcelas iguais ao valor informado.
+// "corr": o valor informado é o de hoje e é corrigido 1,5% a.m. (IPCA + 1% pré) mês a mês,
+//         desde o mês atual até o vencimento de cada parcela. Sem mês informado, a 1ª parcela é no mês seguinte.
+const TAXA_CONC = 0.015;
+function concFluxo(c) {
+  const ini = (c.mes !== "" && c.ano !== "") ? +c.ano * 12 + +c.mes : null;
+  if (c.modo !== "corr") return { ini, primeira: c.valor, ultima: c.valor, total: c.n * c.valor };
+  const meses = Math.max(0, (ini !== null ? ini : baseIdx + 1) - baseIdx);
+  const primeira = c.valor * Math.pow(1 + TAXA_CONC, meses);
+  const ultima = primeira * Math.pow(1 + TAXA_CONC, Math.max(0, c.n - 1));
+  const total = primeira * (Math.pow(1 + TAXA_CONC, c.n) - 1) / TAXA_CONC;   // soma da progressão geométrica
+  return { ini, primeira, ultima, total };
+}
 
 // Um concorrente: fica lado a lado com a condição normal e a Black (3 colunas).
 // Dois ou mais: todos vão para a grade abaixo das condições.
@@ -521,13 +550,17 @@ function updConcs() {
   concs.forEach(c => {
     const q = s => c.el.querySelector(s);
     const ok = concCompleto(c);
-    const ini = (c.mes !== "" && c.ano !== "") ? +c.ano * 12 + +c.mes : null;
-    const total = c.n * c.valor;
+    const { ini, primeira, ultima, total } = concFluxo(c);
+    const corr = c.modo === "corr";
     c.el.classList.toggle("completo", ok);
     q(".p-nome").textContent = concNome(c);
     q(".p-n").textContent = c.n || "";
+    q(".c-plan").textContent = corr ? "parcelas corrigidas, hoje de" : "parcelas fixas de";
     q(".p-val").textContent = brl(c.valor);
     q(".p-ini").textContent = ini !== null ? fmtMes(ini) : "—";
+    c.el.querySelectorAll(".r-corr").forEach(r => r.hidden = !corr);
+    q(".r-pri").textContent = ok ? brl(primeira) : "—";
+    q(".r-ult").textContent = ok ? brl(ultima) : "—";
     q(".r-total").textContent = ok ? brl(total) : "—";
     const box = c.save;   // pode estar dentro do cartão ou abaixo do quadro principal
     box.classList.remove("neg", "pend");
@@ -551,7 +584,7 @@ function renderGrafico() {
   const linhas = [
     { nm: "Condição normal", v: atual.totalNormal, cls: "bn" },
     { nm: "Black Friday Direcional", v: atual.valor, cls: "bb" },
-    ...concs.filter(concCompleto).map(c => ({ nm: concNome(c), v: c.n * c.valor, cls: "bc" })),
+    ...concs.filter(concCompleto).map(c => ({ nm: concNome(c), v: concFluxo(c).total, cls: "bc" })),
   ];
   const max = Math.max(...linhas.map(l => l.v));
   graficoEl.hidden = false;
@@ -663,12 +696,20 @@ function render() {
     // Texto pensado para WhatsApp: *negrito*, _itálico_, emojis e blocos bem espaçados.
     const linha = "━━━━━━━━━━━━━━━━━━";
     const completos = concs.filter(concCompleto);
-    const blocoConc = completos.map(c =>
-`🏢 *${concNome(c)}*
+    const blocoConc = completos.map(c => {
+      const f = concFluxo(c);
+      return c.modo === "corr"
+? `🏢 *${concNome(c)}*
+${c.n}x corrigidas (IPCA + 1% a.m.)
+1ª parcela: ${brl(f.primeira)}
+Última parcela: ${brl(f.ultima)}
+Total: ${brl(f.total)}`
+: `🏢 *${concNome(c)}*
 ${c.n}x de ${brl(c.valor)}
-Total: ${brl(c.n * c.valor)}`).join("\n\n");
+Total: ${brl(f.total)}`;
+    }).join("\n\n");
     const vsConc = completos.map(c => {
-      const dif = c.n * c.valor - valor;
+      const dif = concFluxo(c).total - valor;
       return dif > 0 ? `✅ ${brl(dif)} a menos que ${concNome(c)}` : `ℹ️ ${concNome(c)} sai ${brl(-dif)} mais barato`;
     }).join("\n");
     const txt = [
